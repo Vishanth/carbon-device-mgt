@@ -432,12 +432,15 @@ public class GroupManagementProviderServiceImpl implements GroupManagementProvid
         int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
         List<Device> devices;
         try {
+            rowCount = DeviceManagerUtil.validateDeviceListPageSize(rowCount);
             GroupManagementDAOFactory.openConnection();
             devices = this.groupDAO.getDevices(groupId, startIndex, rowCount, tenantId);
         } catch (GroupManagementDAOException e) {
             throw new GroupManagementException("Error occurred while getting devices in group.", e);
         } catch (SQLException e) {
             throw new GroupManagementException("Error occurred while opening a connection to the data source.", e);
+        } catch (DeviceManagementException e) {
+            throw new GroupManagementException("Error occurred while validating the limit of the devices to be returned", e);
         } finally {
             GroupManagementDAOFactory.closeConnection();
         }
@@ -472,7 +475,8 @@ public class GroupManagementProviderServiceImpl implements GroupManagementProvid
             int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
             GroupManagementDAOFactory.beginTransaction();
             for (DeviceIdentifier deviceIdentifier : deviceIdentifiers) {
-                device = DeviceManagementDataHolder.getInstance().getDeviceManagementProvider().getDevice(deviceIdentifier);
+                device = DeviceManagementDataHolder.getInstance().getDeviceManagementProvider().
+                        getDevice(deviceIdentifier, false);
                 if (device == null) {
                     throw new DeviceNotFoundException("Device not found for id '" + deviceIdentifier.getId() + "'");
                 }
@@ -504,7 +508,8 @@ public class GroupManagementProviderServiceImpl implements GroupManagementProvid
             int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
             GroupManagementDAOFactory.beginTransaction();
             for (DeviceIdentifier deviceIdentifier : deviceIdentifiers) {
-                device = DeviceManagementDataHolder.getInstance().getDeviceManagementProvider().getDevice(deviceIdentifier);
+                device = DeviceManagementDataHolder.getInstance().getDeviceManagementProvider().
+                        getDevice(deviceIdentifier, false);
                 if (device == null) {
                     throw new DeviceNotFoundException("Device not found for id '" + deviceIdentifier.getId() + "'");
                 }
@@ -553,7 +558,7 @@ public class GroupManagementProviderServiceImpl implements GroupManagementProvid
     public List<DeviceGroup> getGroups(DeviceIdentifier deviceIdentifier) throws GroupManagementException {
         DeviceManagementProviderService managementProviderService = new DeviceManagementProviderServiceImpl();
         try {
-            Device device = managementProviderService.getDevice(deviceIdentifier);
+            Device device = managementProviderService.getDevice(deviceIdentifier, false);
             GroupManagementDAOFactory.openConnection();
             return groupDAO.getGroups(device.getId(),
                     PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId());
